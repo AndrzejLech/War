@@ -1,12 +1,21 @@
-extends Node
+extends Area2D
 
 var  cards = []
 
 func _ready():
 	pass
 
-func fill(newCards):
-	cards = cards
+func fill(array: Array, newPosition):
+	for element in array:
+		cards.append(
+			Card.new(
+				element[0],
+				element[2],
+				element[3],
+				element[1]
+			)
+		)
+		position = newPosition
 	
 func draw():
 	var card = cards[cards.size]
