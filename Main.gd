@@ -107,6 +107,7 @@ func _on_HUD_draw_button_pressed():
 
 
 func compare_cards():
+	# checking third card
 	if !is_war and is_second_cards_on:
 		if $EnemyThirdCard.value > $PlayerThirdCard.value:
 			$HUD.set_enemy_score(
@@ -120,7 +121,10 @@ func compare_cards():
 				)
 			$HUD/EnemyScoreLabel.text = "Enemy \n Score: " + str($HUD.get_enemy_score())
 			$HUD.show_message("Enemy won the WAR!")
-		elif $EnemyThirdCard.value < $PlayerThirdCard.value:
+			
+			print("Enemy won War "+ $EnemyThirdCard.value + " vs " + $PlayerThirdCard.value)
+			
+		if $EnemyThirdCard.value < $PlayerThirdCard.value:
 			$HUD.set_player_score(
 				$HUD.get_player_score() +
 				int($EnemyCard.value) +
@@ -133,17 +137,26 @@ func compare_cards():
 			$HUD/EnemyScoreLabel.text = "Your \n Score: " + str($HUD.get_player_score())
 			$HUD.show_message("You won the WAR!")
 			
+			print("Player won War "+ $PlayerThirdCard.value + " vs " + $EnemyThirdCard.value)
+			
 		is_second_cards_on = false
+		
+	#no war checking	
 	elif !is_war and !is_second_cards_on:
 		hide_additional_cards()
+		
 		if $EnemyCard.value > $PlayerCard.value:
 			$HUD.set_enemy_score($HUD.get_enemy_score() + int($EnemyCard.value) + int($PlayerCard.value))
 			$HUD/EnemyScoreLabel.text = "Enemy \n Score: " + str($HUD.get_enemy_score())
 			$HUD.show_message("Enemy Wins!")
+			
+			print("Enemy won "+ $EnemyCard.value + " vs " + $PlayerCard.value)
+			
 		elif $EnemyCard.value < $PlayerCard.value:
 			$HUD.set_player_score($HUD.get_player_score() + int($EnemyCard.value) + int($PlayerCard.value))
 			$HUD/PlayerScoreLabel.text = "Your \n Score: " + str($HUD.get_player_score())
 			$HUD.show_message("You Win!")
+			print("Player won "+ $PlayerCard.value + " vs " + $EnemyCard.value)
 		else:
 			$HUD.show_message("War!")
 			is_war = true
@@ -157,10 +170,8 @@ func hide_additional_cards():
 
 func _on_HUD_new_game_button_pressed():
 	_ready()
-
-
-
-
+	
+	
 func _on_EnemyCard_card_info(card_name, card_suit, card_value):
 	if card_name != "":
 		$HUD/InfoLabel.text = "Card: " + card_name + "\n" + "Suit: " + card_suit + "\n" + "Value: " + card_value
@@ -169,7 +180,7 @@ func _on_EnemyCard_card_info(card_name, card_suit, card_value):
 
 
 func _on_EnemySecondCard_card_info(card_name, card_suit, card_value):
-	if card_name != "":
+	if card_name != "" and 	$EnemySecondCard.is_shown:
 		$HUD/InfoLabel.text = "Card: " + card_name + "\n" + "Suit: " + card_suit + "\n" + "Value: " + card_value
 	else:
 		$HUD/InfoLabel.text = ""
@@ -190,7 +201,7 @@ func _on_PlayerCard_card_info(card_name, card_suit, card_value):
 
 
 func _on_PlayerSecondCard_card_info(card_name, card_suit, card_value):
-	if card_name != "":
+	if card_name != "" and 	$PlayerSecondCard.is_shown:
 		$HUD/InfoLabel.text = "Card: " + card_name + "\n" + "Suit: " + card_suit + "\n" + "Value: " + card_value
 	else:
 		$HUD/InfoLabel.text = ""
