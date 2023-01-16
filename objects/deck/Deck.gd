@@ -17,10 +17,10 @@ func fill(array: Array, newPosition):
 		)
 		position = newPosition
 	
-func draw():
-	var card = cards[cards.size]
+func draw() -> Card:
+	var card = cards[cards.size() - 1]
 	cards.pop_back()
 	return card
 
-func getNumberOfCards():
+func get_number_of_cards():
 	return cards.size()
