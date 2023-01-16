@@ -1,23 +1,26 @@
 extends Node
 
+var is_war = false
+var is_second_cards_on = false
 var database = preload("res://data/CardsDatabase.gd")
-var enemy_score = 0
-var player_score = 0
 
 func _ready():
-	enemy_score = 0
-	player_score = 0
+
+	$HUD/DrawButton.disabled = false
+	$HUD/NewGameButton.hide()
+	hide_additional_cards()
+	
 	var card_array = shuffle_array(load_database())
 	var first_half = card_array.slice(0, 25)
 	var second_half = card_array.slice(26, 51)
-	
-	print(compare_arrays(first_half, second_half))
 	
 	$EnemyDeck.fill(first_half, $EnemyDeckPosition.position)
 	$PlayerDeck.fill(second_half, $PlayerDeckPosition.position)
 	$PlayerCard.set_position($PlayerCardPosition.position)
 	$EnemyCard.set_position($EnemyCardPosition.position)
-
+	
+	$HUD.set_enemy_score(0)
+	$HUD.set_player_score(0)
 
 func load_database() -> Array:
 	var array: Array = []
@@ -30,63 +33,172 @@ func shuffle_array(array: Array) -> Array:
 	randomize()
 	array.shuffle()
 	return array
+	
+
+
+func end_game():
+	$HUD.show_message(compare_score() + " wins the game!")
+	yield($HUD/MessageTimer, "timeout")
+	$HUD/DrawButton.disabled = true
+	$HUD/NewGameButton.show()
+	
+
+
+func compare_score():
+	var winner = ""
+	if $HUD.get_enemy_score() < $HUD.get_player_score():
+		winner = "Player"
+	else:
+		winner = "Enemy"
+	return winner
 
 
 func _on_PlayerDeck_mouse_entered():
-	$InfoLabel.text = 	"You have " + str($PlayerDeck.get_number_of_cards()) + " cards left."
+	$HUD/InfoLabel.text = 	"You have " + str($PlayerDeck.get_number_of_cards()) + " cards left."
+	print("_on_PlayerDeck_mouse_entered")
 
 
 func _on_PlayerDeck_mouse_exited():
-	$InfoLabel.text = ""
+	$HUD/InfoLabel.text = ""
+	print("_on_PlayerDeck_mouse_exited")
 
 
 func _on_EnemyDeck_mouse_entered():
-	$InfoLabel.text = 	"Enemy has " + str($EnemyDeck.get_number_of_cards()) + " cards left."
+	$HUD/InfoLabel.text = 	"Enemy has " + str($EnemyDeck.get_number_of_cards()) + " cards left."
 
 
 func _on_EnemyDeck_mouse_exited():
-	$InfoLabel.text = ""
+	$HUD/InfoLabel.text = ""
 
 
-func _on_Button_pressed():
+func _on_HUD_draw_button_pressed():
+	if($PlayerDeck.cards.size() == 0):
+		end_game()
+		return
+	
 	var new_player_card = $PlayerDeck.draw()
 	var new_enemy_card = $EnemyDeck.draw()
 	
-	$PlayerCard.change(
-		new_player_card.texture_path,
-		new_player_card.card_name,
-		new_player_card.value,
-		new_player_card.suit
-	)
-	
-	$EnemyCard.change(
-		new_enemy_card.texture_path,
-		new_enemy_card.card_name,
-		new_enemy_card.value,
-		new_enemy_card.suit
-	)
-	
+	if !is_war:
+		$PlayerCard.change(new_player_card.texture_path, new_player_card.card_name,new_player_card.value, new_player_card.suit)
+		$EnemyCard.change(new_enemy_card.texture_path, new_enemy_card.card_name, new_enemy_card.value, new_enemy_card.suit)
+	else:
+		if is_second_cards_on:
+			$EnemyThirdCard.change(new_enemy_card.texture_path, new_enemy_card.card_name, new_enemy_card.value, new_enemy_card.suit)
+			$EnemySecondCard.reverse_card()
+			
+			$PlayerThirdCard.change(new_player_card.texture_path, new_player_card.card_name, new_player_card.value, new_player_card.suit)
+			$PlayerSecondCard.reverse_card()
+			is_war = false
+		else:
+			$EnemySecondCard.hide()
+			$EnemySecondCard.change(new_enemy_card.texture_path, new_enemy_card.card_name, new_enemy_card.value, new_enemy_card.suit)
+			$EnemySecondCard.reverse_card()
+			$EnemySecondCard.show()
+			
+			$PlayerSecondCard.hide()
+			$PlayerSecondCard.change(new_player_card.texture_path, new_player_card.card_name, new_player_card.value,new_player_card.suit)
+			$PlayerSecondCard.reverse_card()
+			$PlayerSecondCard.show()
+			
+			is_second_cards_on = true
+			
 	compare_cards()
-	
-	if $PlayerDeck.cards.size()== 0:
-		_ready()
 
 
 func compare_cards():
-	if $EnemyCard.value > $PlayerCard.value:
-		enemy_score += int($EnemyCard.value) + int($PlayerCard.value)
-		$EnemyScoreLabel.text = "Enemy \n Score: " + str(enemy_score)
+	if !is_war and is_second_cards_on:
+		if $EnemyThirdCard.value > $PlayerThirdCard.value:
+			$HUD.set_enemy_score(
+				$HUD.get_enemy_score() +
+				int($EnemyCard.value) +
+				int($EnemySecondCard.value) +
+				int($EnemySecondCard.value) +
+				int($PlayerCard.value) +
+				int($PlayerSecondCard.value) +
+				int($PlayerThirdCard.value) 
+				)
+			$HUD/EnemyScoreLabel.text = "Enemy \n Score: " + str($HUD.get_enemy_score())
+			$HUD.show_message("Enemy won the WAR!")
+		elif $EnemyThirdCard.value < $PlayerThirdCard.value:
+			$HUD.set_player_score(
+				$HUD.get_player_score() +
+				int($EnemyCard.value) +
+				int($EnemySecondCard.value) +
+				int($EnemySecondCard.value) +
+				int($PlayerCard.value) +
+				int($PlayerSecondCard.value) +
+				int($PlayerThirdCard.value) 
+			)
+			$HUD/EnemyScoreLabel.text = "Your \n Score: " + str($HUD.get_player_score())
+			$HUD.show_message("You won the WAR!")
+			
+		is_second_cards_on = false
+	elif !is_war and !is_second_cards_on:
+		hide_additional_cards()
+		if $EnemyCard.value > $PlayerCard.value:
+			$HUD.set_enemy_score($HUD.get_enemy_score() + int($EnemyCard.value) + int($PlayerCard.value))
+			$HUD/EnemyScoreLabel.text = "Enemy \n Score: " + str($HUD.get_enemy_score())
+			$HUD.show_message("Enemy Wins!")
+		elif $EnemyCard.value < $PlayerCard.value:
+			$HUD.set_player_score($HUD.get_player_score() + int($EnemyCard.value) + int($PlayerCard.value))
+			$HUD/PlayerScoreLabel.text = "Your \n Score: " + str($HUD.get_player_score())
+			$HUD.show_message("You Win!")
+		else:
+			$HUD.show_message("War!")
+			is_war = true
+
+func hide_additional_cards():
+	$PlayerSecondCard.hide()
+	$PlayerThirdCard.hide()
+	$EnemySecondCard.hide()
+	$EnemyThirdCard.hide()
+
+
+func _on_HUD_new_game_button_pressed():
+	_ready()
+
+
+
+
+func _on_EnemyCard_card_info(card_name, card_suit, card_value):
+	if card_name != "":
+		$HUD/InfoLabel.text = "Card: " + card_name + "\n" + "Suit: " + card_suit + "\n" + "Value: " + card_value
 	else:
-		player_score += int($EnemyCard.value) + int($PlayerCard.value)
-		$PlayerScoreLabel.text = "Your \n Score: " + str(player_score)
+		$HUD/InfoLabel.text = ""
 
 
-func compare_arrays(array1, array2):
-	var has_same_element = false
-	
-	for element1 in array1:
-		for element2 in array2:
-			if element1 == element2:
-				has_same_element = true
-	
-	return has_same_element
+func _on_EnemySecondCard_card_info(card_name, card_suit, card_value):
+	if card_name != "":
+		$HUD/InfoLabel.text = "Card: " + card_name + "\n" + "Suit: " + card_suit + "\n" + "Value: " + card_value
+	else:
+		$HUD/InfoLabel.text = ""
+
+
+func _on_EnemyThirdCard_card_info(card_name, card_suit, card_value):
+	if card_name != "":
+		$HUD/InfoLabel.text = "Card: " + card_name + "\n" + "Suit: " + card_suit + "\n" + "Value: " + card_value
+	else:
+		$HUD/InfoLabel.text = ""
+
+
+func _on_PlayerCard_card_info(card_name, card_suit, card_value):
+	if card_name != "":
+		$HUD/InfoLabel.text = "Card: " + card_name + "\n" + "Suit: " + card_suit + "\n" + "Value: " + card_value
+	else:
+		$HUD/InfoLabel.text = ""
+
+
+func _on_PlayerSecondCard_card_info(card_name, card_suit, card_value):
+	if card_name != "":
+		$HUD/InfoLabel.text = "Card: " + card_name + "\n" + "Suit: " + card_suit + "\n" + "Value: " + card_value
+	else:
+		$HUD/InfoLabel.text = ""
+
+
+func _on_PlayerThirdCard_card_info(card_name, card_suit, card_value):
+	if card_name != "":
+		$HUD/InfoLabel.text = "Card: " + card_name + "\n" + "Suit: " + card_suit + "\n" + "Value: " + card_value
+	else:
+		$HUD/InfoLabel.text = ""
+
