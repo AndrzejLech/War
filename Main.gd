@@ -3,9 +3,9 @@ extends Node
 var is_war = false
 var is_second_cards_on = false
 var database = preload("res://data/CardsDatabase.gd")
+var comparing_handler = load("res://utils/ComparingHandler.gd").new()
 
 func _ready():
-
 	$HUD/DrawButton.disabled = false
 	$HUD/NewGameButton.hide()
 	hide_additional_cards()
@@ -48,8 +48,10 @@ func compare_score():
 	var winner = ""
 	if $HUD.get_enemy_score() < $HUD.get_player_score():
 		winner = "Player"
-	else:
+	elif $HUD.get_enemy_score() > $HUD.get_player_score():
 		winner = "Enemy"
+	else:
+		winner = "Nobody"
 	return winner
 
 
@@ -106,60 +108,50 @@ func _on_HUD_draw_button_pressed():
 	compare_cards()
 
 
-func compare_cards():
+func compare_cards(): 
 	# checking third card
 	if !is_war and is_second_cards_on:
-		if $EnemyThirdCard.value > $PlayerThirdCard.value:
-			$HUD.set_enemy_score(
-				$HUD.get_enemy_score() +
-				int($EnemyCard.value) +
-				int($EnemySecondCard.value) +
-				int($EnemySecondCard.value) +
-				int($PlayerCard.value) +
-				int($PlayerSecondCard.value) +
-				int($PlayerThirdCard.value) 
-				)
+		var result = comparing_handler.compare_third_card(
+			int($EnemyThirdCard.value),
+			int($PlayerThirdCard.value),
+			[
+				int($PlayerCard.value),
+				int($PlayerSecondCard.value),
+				int($EnemyCard.value),
+				int($EnemySecondCard.value),
+			]
+		)
+		if result.enemy_won:
+			$HUD.set_enemy_score($HUD.get_enemy_score() + result.score)
 			$HUD/EnemyScoreLabel.text = "Enemy \n Score: " + str($HUD.get_enemy_score())
 			$HUD.show_message("Enemy won the WAR!")
-			
-			print("Enemy won War "+ $EnemyThirdCard.value + " vs " + $PlayerThirdCard.value)
-			
-		if $EnemyThirdCard.value < $PlayerThirdCard.value:
-			$HUD.set_player_score(
-				$HUD.get_player_score() +
-				int($EnemyCard.value) +
-				int($EnemySecondCard.value) +
-				int($EnemySecondCard.value) +
-				int($PlayerCard.value) +
-				int($PlayerSecondCard.value) +
-				int($PlayerThirdCard.value) 
-			)
-			$HUD/EnemyScoreLabel.text = "Your \n Score: " + str($HUD.get_player_score())
+		else:
+			$HUD.set_player_score($HUD.get_player_score() + result.score)
+			$HUD/PlayerScoreLabel.text = "Your \n Score: " + str($HUD.get_player_score())
 			$HUD.show_message("You won the WAR!")
-			
-			print("Player won War "+ $PlayerThirdCard.value + " vs " + $EnemyThirdCard.value)
-			
 		is_second_cards_on = false
 		
-	#no war checking	
+	#no war checking
 	elif !is_war and !is_second_cards_on:
 		hide_additional_cards()
 		
-		if $EnemyCard.value > $PlayerCard.value:
-			$HUD.set_enemy_score($HUD.get_enemy_score() + int($EnemyCard.value) + int($PlayerCard.value))
-			$HUD/EnemyScoreLabel.text = "Enemy \n Score: " + str($HUD.get_enemy_score())
-			$HUD.show_message("Enemy Wins!")
-			
-			print("Enemy won "+ $EnemyCard.value + " vs " + $PlayerCard.value)
-			
-		elif $EnemyCard.value < $PlayerCard.value:
-			$HUD.set_player_score($HUD.get_player_score() + int($EnemyCard.value) + int($PlayerCard.value))
-			$HUD/PlayerScoreLabel.text = "Your \n Score: " + str($HUD.get_player_score())
-			$HUD.show_message("You Win!")
-			print("Player won "+ $PlayerCard.value + " vs " + $EnemyCard.value)
-		else:
-			$HUD.show_message("War!")
+		var result = comparing_handler.compare_card(
+			int($PlayerCard.value),
+			int($EnemyCard.value)
+		)
+		
+		if result.is_war:
+			$HUD.show_message("WAR!")
 			is_war = true
+		elif result.enemy_won:
+			$HUD.set_enemy_score($HUD.get_enemy_score() + result.score)
+			$HUD/EnemyScoreLabel.text = "Enemy \n Score: " + str($HUD.get_enemy_score())
+			$HUD.show_message("Enemy won!")
+		else:
+			$HUD.set_player_score($HUD.get_player_score() + result.score)
+			$HUD/PlayerScoreLabel.text = "Your \n Score: " + str($HUD.get_player_score())
+			$HUD.show_message("You won!")
+			
 
 func hide_additional_cards():
 	$PlayerSecondCard.hide()
